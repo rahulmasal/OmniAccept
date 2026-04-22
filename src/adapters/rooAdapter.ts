@@ -3,48 +3,93 @@ import { ActionContext, ActionBatch, AdapterStatus, RiskLevel, ApprovalState } f
 import { BaseAdapter, createAdapterStatus } from './interface';
 import { getLogger } from '../logger';
 
-/**
- * Adapter for Roo Code extension
- * Roo Code is an AI coding assistant that provides autonomous coding capabilities
- */
+interface RooCodeAPI {
+    onDidCreateTask?: (callback: (task: unknown) => void) => vscode.Disposable;
+    onDidCompleteTask?: (callback: (task: unknown) => void) => vscode.Disposable;
+    onDidApproveAction?: (callback: (action: unknown) => void) => vscode.Disposable;
+    onDidRejectAction?: (callback: (action: unknown) => void) => vscode.Disposable;
+    getPendingActions?: () => Promise<unknown[]>;
+    approveAction?: (actionId: string) => Promise<boolean>;
+    rejectAction?: (actionId: string) => Promise<boolean>;
+}
+
 export class RooCodeAdapter extends BaseAdapter {
     readonly name = 'Roo Code';
     readonly extensionId = 'rooveterinary.roo-code';
     override readonly version = '1.0.0';
 
+    private api: RooCodeAPI | null = null;
+    private apiDisposables: vscode.Disposable[] = [];
+
     constructor() {
         super();
         this.checkActive();
+        this.tryConnectAPI();
     }
 
-    /**
-     * Check if the Roo Code extension is active
-     */
+    private tryConnectAPI(): void {
+        const logger = getLogger();
+        try {
+            const extension = this.getExtension(this.extensionId);
+            if (extension && extension.isActive && extension.exports) {
+                this.api = extension.exports as RooCodeAPI;
+                logger.info('Roo Code: Connected to extension API');
+                this.setupAPIListeners();
+            } else {
+                logger.debug('Roo Code: No exports API available, using file-watcher fallback');
+            }
+        } catch (error) {
+            logger.debug(`Roo Code: API connection failed: ${error}`);
+        }
+    }
+
+    private setupAPIListeners(): void {
+        if (!this.api) {
+            return;
+        }
+
+        const logger = getLogger();
+
+        if (this.api.onDidCreateTask) {
+            const sub = this.api.onDidCreateTask((task) => {
+                logger.debug(`Roo Code: Task created: ${JSON.stringify(task)}`);
+                const action = this.createActionContextFromAPI('createFiles', 'Roo Code task created');
+                this.emitAction(action);
+            });
+            this.apiDisposables.push(sub);
+        }
+
+        if (this.api.onDidApproveAction) {
+            const sub = this.api.onDidApproveAction((action) => {
+                logger.debug(`Roo Code: Action approved by user: ${JSON.stringify(action)}`);
+                this.lastActivity = new Date();
+            });
+            this.apiDisposables.push(sub);
+        }
+
+        if (this.api.onDidRejectAction) {
+            const sub = this.api.onDidRejectAction((action) => {
+                logger.debug(`Roo Code: Action rejected by user: ${JSON.stringify(action)}`);
+                this.lastActivity = new Date();
+            });
+            this.apiDisposables.push(sub);
+        }
+    }
+
     private checkActive(): void {
         const extension = this.getExtension(this.extensionId);
         this._isActive = extension !== undefined && extension.isActive;
     }
 
-    /**
-     * Check if the adapter is currently active
-     */
     public isActive(): boolean {
         this.checkActive();
         return this._isActive;
     }
 
-    /**
-     * Check if the adapter is enabled in settings
-     */
     public isEnabled(): boolean {
-        // In a real implementation, this would check settings
-        // For now, just check if extension is active
         return this.isActive();
     }
 
-    /**
-     * Get pending actions from Roo Code
-     */
     public async getPendingActions(): Promise<ActionContext[]> {
         if (!this.isActive()) {
             return [];
@@ -53,48 +98,55 @@ export class RooCodeAdapter extends BaseAdapter {
         const logger = getLogger();
         logger.debug('Getting pending actions from Roo Code');
 
-        // In a real implementation, this would communicate with the Roo Code extension
-        // via its API or through workspace events. Since VS Code doesn't expose
-        // a public API for this, we implement a best-effort approach using
-        // file system watching and workspace events.
+        if (this.api && this.api.getPendingActions) {
+            try {
+                const rawActions = await this.api.getPendingActions();
+                if (Array.isArray(rawActions)) {
+                    return rawActions.map((a: unknown) => this.createActionContextFromAPI(
+                        'editFiles',
+                        `Roo Code action: ${String(a)}`
+                    ));
+                }
+            } catch (error) {
+                logger.error(`Roo Code: Failed to get pending actions: ${error}`);
+            }
+        }
 
-        // For now, return empty array - real implementation would
-        // hook into Roo Code's internal event system
         return [];
     }
 
-    /**
-     * Approve a specific action
-     */
     public async approveAction(action: ActionContext): Promise<boolean> {
         const logger = getLogger();
         logger.info(`Roo Code: Approving action ${action.id}`);
-
         this.lastActivity = new Date();
 
-        // In a real implementation, this would send approval back to Roo Code
-        // Since VS Code doesn't have a public API for this, we rely on
-        // the extension's built-in approval system or configuration
+        if (this.api && this.api.approveAction) {
+            try {
+                return await this.api.approveAction(action.id);
+            } catch (error) {
+                logger.error(`Roo Code: API approve failed: ${error}`);
+            }
+        }
 
         return true;
     }
 
-    /**
-     * Reject a specific action
-     */
     public async rejectAction(action: ActionContext): Promise<boolean> {
         const logger = getLogger();
         logger.info(`Roo Code: Rejecting action ${action.id}`);
-
         this.lastActivity = new Date();
 
-        // In a real implementation, this would send rejection back to Roo Code
+        if (this.api && this.api.rejectAction) {
+            try {
+                return await this.api.rejectAction(action.id);
+            } catch (error) {
+                logger.error(`Roo Code: API reject failed: ${error}`);
+            }
+        }
+
         return true;
     }
 
-    /**
-     * Approve all actions in a batch
-     */
     public async approveBatch(batch: ActionBatch): Promise<boolean> {
         const logger = getLogger();
         logger.info(`Roo Code: Approving batch ${batch.id} with ${batch.actions.length} actions`);
@@ -106,9 +158,6 @@ export class RooCodeAdapter extends BaseAdapter {
         return true;
     }
 
-    /**
-     * Reject all actions in a batch
-     */
     public async rejectBatch(batch: ActionBatch): Promise<boolean> {
         const logger = getLogger();
         logger.info(`Roo Code: Rejecting batch ${batch.id} with ${batch.actions.length} actions`);
@@ -120,22 +169,16 @@ export class RooCodeAdapter extends BaseAdapter {
         return true;
     }
 
-    /**
-     * Get current adapter status
-     */
     public getAdapterStatus(): AdapterStatus {
         return createAdapterStatus(
             this.name,
             this.version,
             this.isActive(),
             this.isEnabled(),
-            0 // Pending actions count would be retrieved from Roo Code
+            0
         );
     }
 
-    /**
-     * Create an action context for Roo Code events
-     */
     public createActionContext(
         type: string,
         description: string,
@@ -155,9 +198,20 @@ export class RooCodeAdapter extends BaseAdapter {
         };
     }
 
-    /**
-     * Check if a path is in the workspace
-     */
+    private createActionContextFromAPI(type: string, description: string): ActionContext {
+        return {
+            id: this.generateActionId(),
+            type: type as ActionContext['type'],
+            description,
+            isWorkspaceFile: true,
+            isSensitiveFile: false,
+            adapterName: this.name,
+            timestamp: new Date(),
+            riskLevel: RiskLevel.Low,
+            requiredApproval: ApprovalState.Ask
+        };
+    }
+
     private isPathInWorkspace(filePath: string): boolean {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders) {
@@ -167,7 +221,7 @@ export class RooCodeAdapter extends BaseAdapter {
         for (const folder of workspaceFolders) {
             const folderPath = folder.uri.fsPath.replace(/\\/g, '/').toLowerCase();
             const normalizedPath = filePath.replace(/\\/g, '/').toLowerCase();
-            
+
             if (normalizedPath.startsWith(folderPath)) {
                 return true;
             }
@@ -176,20 +230,10 @@ export class RooCodeAdapter extends BaseAdapter {
         return false;
     }
 
-    /**
-     * Check if files contain sensitive content
-     */
     private containsSensitiveFiles(files: string[]): boolean {
         const sensitivePatterns = [
-            '.env',
-            '.ssh',
-            'secret',
-            'token',
-            'key',
-            'password',
-            'credential',
-            '.pem',
-            '.key'
+            '.env', '.ssh', 'secret', 'token', 'key',
+            'password', 'credential', '.pem', '.key'
         ];
 
         for (const file of files) {
@@ -202,5 +246,12 @@ export class RooCodeAdapter extends BaseAdapter {
         }
 
         return false;
+    }
+
+    public override dispose(): void {
+        this.apiDisposables.forEach(d => d.dispose());
+        this.apiDisposables = [];
+        this.api = null;
+        super.dispose();
     }
 }

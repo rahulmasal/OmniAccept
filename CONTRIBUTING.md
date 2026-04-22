@@ -38,7 +38,7 @@ We follow the [Contributor Covenant](https://www.contributor-covariant.org/). By
    ```
 3. **Add upstream** remote:
    ```bash
-   git remote add upstream https://github.com/omni-enterprise/universal-auto-accept.git
+   git remote add upstream https://github.com/rahulmasal/universal-auto-accept.git
    ```
 
 ---

@@ -76,4 +76,4 @@ This extension operates within VS Code's public API. See [LIMITATIONS.md](./LIMI
 
 ---
 
-*This changelog was generated using [git-changelog](https://github.com/omni-enterprise/git-changelog) principles.*
+*This changelog was generated using [git-changelog](https://github.com/rahulmasal/git-changelog) principles.*

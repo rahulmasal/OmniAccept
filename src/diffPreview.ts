@@ -1,153 +1,261 @@
-import * as vscode from 'vscode';
-import { ActionBatch, DiffPreviewMessage, DiffPreviewState, FilePreview } from './types';
-import { getLogger } from './logger';
-import { getApprovalEngine } from './approvalEngine';
+import * as vscode from "vscode";
+import {
+  ActionBatch,
+  DiffPreviewMessage,
+  DiffPreviewState,
+  FilePreview,
+  ApprovalState,
+} from "./types";
+import { getLogger } from "./logger";
+import { getApprovalEngine } from "./approvalEngine";
 
 /**
  * Webview panel for diff preview in ASK mode
+ * Enhanced with file-level approval (Enhancement 7)
  */
 export class DiffPreviewPanel {
-    private static panel: vscode.WebviewPanel | null = null;
-    private static currentState: DiffPreviewState | null = null;
+  private static panel: vscode.WebviewPanel | null = null;
+  private static currentState: DiffPreviewState | null = null;
 
-    private static readonly viewType = 'universalAutoAccept.diffPreview';
-    private static readonly title = 'Universal Auto Accept - Diff Preview';
+  private static readonly viewType = "universalAutoAccept.diffPreview";
+  private static readonly title = "Universal Auto Accept - Diff Preview";
 
-    /**
-     * Show the diff preview panel
-     */
-    public static show(batch: ActionBatch): void {
-        const logger = getLogger();
-        logger.info(`Showing diff preview for batch: ${batch.id}`);
+  /**
+   * Show the diff preview panel
+   */
+  public static show(batch: ActionBatch): void {
+    const logger = getLogger();
+    logger.info(`Showing diff preview for batch: ${batch.id}`);
 
-        // Create or reveal panel
-        if (!this.panel) {
-            this.panel = vscode.window.createWebviewPanel(
-                this.viewType,
-                this.title,
-                { viewColumn: vscode.ViewColumn.Two, preserveFocus: true },
-                {
-                    enableScripts: true,
-                    retainContextWhenHidden: true
-                }
-            );
-        }
+    // Create or reveal panel
+    if (!this.panel) {
+      this.panel = vscode.window.createWebviewPanel(
+        this.viewType,
+        this.title,
+        { viewColumn: vscode.ViewColumn.Two, preserveFocus: true },
+        {
+          enableScripts: true,
+          retainContextWhenHidden: true,
+        },
+      );
 
-        // Build file previews from actions
-        const files = this.buildFilePreviews(batch);
-
-        // Update state
-        this.currentState = { batch, files };
-
-        // Set webview content
-        this.panel.webview.html = this.buildHtml(files, batch);
-        this.panel.webview.onDidReceiveMessage((message) => {
-            this.handleMessage(message);
-        });
-
-        // Show the panel
-        this.panel.reveal(vscode.ViewColumn.Two, true);
+      this.panel.onDidDispose(() => {
+        this.panel = null;
+        this.currentState = null;
+      });
     }
 
-    /**
-     * Build file previews from batch actions
-     */
-    private static buildFilePreviews(batch: ActionBatch): FilePreview[] {
-        const previews: FilePreview[] = [];
+    // Build file previews from actions
+    const files = this.buildFilePreviews(batch);
 
-        for (const action of batch.actions) {
-            if (action.files) {
-                for (const file of action.files) {
-                    let status: FilePreview['status'];
-
-                    switch (action.type) {
-                        case 'createFiles':
-                            status = 'added';
-                            break;
-                        case 'deleteFiles':
-                            status = 'deleted';
-                            break;
-                        case 'renameFiles':
-                            status = 'modified';
-                            break;
-                        default:
-                            status = 'modified';
-                    }
-
-                    previews.push({
-                        path: file,
-                        originalContent: undefined,
-                        newContent: action.description,
-                        status
-                    });
-                }
-            }
-        }
-
-        return previews;
+    // Initialize file-level approval states
+    const fileApprovalStates = new Map<string, ApprovalState>();
+    for (const file of files) {
+      fileApprovalStates.set(file.path, ApprovalState.Ask);
+      file.approvalState = ApprovalState.Ask;
     }
 
-    /**
-     * Handle messages from the webview
-     */
-    private static async handleMessage(message: DiffPreviewMessage): Promise<void> {
-        const logger = getLogger();
-        const approvalEngine = getApprovalEngine();
+    // Update state
+    this.currentState = { batch, files, fileApprovalStates };
 
-        switch (message.type) {
-            case 'approve':
-                logger.info(`DiffPreview: Approve batch ${message.batchId}`);
-                await approvalEngine.approveCurrentBatch();
-                this.hide();
-                break;
+    // Set webview content
+    this.panel.webview.html = this.buildHtml(files, batch);
+    this.panel.webview.onDidReceiveMessage((message: DiffPreviewMessage) => {
+      this.handleMessage(message);
+    });
 
-            case 'reject':
-                logger.info(`DiffPreview: Reject batch ${message.batchId}`);
-                await approvalEngine.rejectCurrentBatch();
-                this.hide();
-                break;
+    // Show the panel
+    this.panel.reveal(vscode.ViewColumn.Two, true);
+  }
 
-            case 'approveFile':
-                logger.info(`DiffPreview: Approve file ${message.filePath}`);
-                // Would need to implement file-level approval
-                break;
+  /**
+   * Build file previews from batch actions
+   */
+  private static buildFilePreviews(batch: ActionBatch): FilePreview[] {
+    const previews: FilePreview[] = [];
 
-            case 'rejectFile':
-                logger.info(`DiffPreview: Reject file ${message.filePath}`);
-                // Would need to implement file-level rejection
-                break;
+    for (const action of batch.actions) {
+      if (action.files) {
+        for (const file of action.files) {
+          let status: FilePreview["status"];
 
-            case 'showMore':
-                // Handle pagination
-                break;
+          switch (action.type) {
+            case "createFiles":
+              status = "added";
+              break;
+            case "deleteFiles":
+              status = "deleted";
+              break;
+            case "renameFiles":
+              status = "modified";
+              break;
+            default:
+              status = "modified";
+          }
 
-            case 'ready':
-                logger.debug('DiffPreview: Webview ready');
-                break;
+          previews.push({
+            path: file,
+            originalContent: undefined,
+            newContent: action.description,
+            status,
+            approvalState: ApprovalState.Ask,
+          });
         }
+      }
     }
 
-    /**
-     * Build the HTML content for the webview
-     */
-    private static buildHtml(files: FilePreview[], batch: ActionBatch): string {
-        const fileListHtml = files.map((file, index) => `
-            <div class="file-item" data-index="${index}">
+    return previews;
+  }
+
+  /**
+   * Handle messages from the webview
+   * Enhanced with file-level approval (Enhancement 7)
+   */
+  private static async handleMessage(
+    message: DiffPreviewMessage,
+  ): Promise<void> {
+    const logger = getLogger();
+    const approvalEngine = getApprovalEngine();
+
+    switch (message.type) {
+      case "approve":
+        logger.info(`DiffPreview: Approve batch ${message.batchId}`);
+        await approvalEngine.approveCurrentBatch();
+        this.hide();
+        break;
+
+      case "reject":
+        logger.info(`DiffPreview: Reject batch ${message.batchId}`);
+        await approvalEngine.rejectCurrentBatch();
+        this.hide();
+        break;
+
+      case "approveFile":
+        logger.info(`DiffPreview: Approve file ${message.filePath}`);
+        this.setFileApprovalState(message.filePath, ApprovalState.Allow);
+        break;
+
+      case "rejectFile":
+        logger.info(`DiffPreview: Reject file ${message.filePath}`);
+        this.setFileApprovalState(message.filePath, ApprovalState.Deny);
+        break;
+
+      case "showMore":
+        // Handle pagination
+        break;
+
+      case "ready":
+        logger.debug("DiffPreview: Webview ready");
+        break;
+    }
+  }
+
+  /**
+   * Set the approval state for a specific file
+   */
+  private static setFileApprovalState(
+    filePath: string,
+    state: ApprovalState,
+  ): void {
+    if (!this.currentState) {
+      return;
+    }
+
+    this.currentState.fileApprovalStates.set(filePath, state);
+
+    // Update the file preview
+    const file = this.currentState.files.find((f) => f.path === filePath);
+    if (file) {
+      file.approvalState = state;
+    }
+
+    // Update the webview to reflect the change
+    if (this.panel && this.currentState) {
+      this.panel.webview.html = this.buildHtml(
+        this.currentState.files,
+        this.currentState.batch,
+      );
+    }
+
+    // Check if all files have been decided
+    this.checkAllFilesDecided();
+  }
+
+  /**
+   * Check if all files have been individually approved/rejected
+   */
+  private static checkAllFilesDecided(): void {
+    if (!this.currentState) {
+      return;
+    }
+
+    const allDecided = this.currentState.files.every(
+      (f) =>
+        f.approvalState === ApprovalState.Allow ||
+        f.approvalState === ApprovalState.Deny,
+    );
+
+    if (allDecided) {
+      const allApproved = this.currentState.files.every(
+        (f) => f.approvalState === ApprovalState.Allow,
+      );
+      const allRejected = this.currentState.files.every(
+        (f) => f.approvalState === ApprovalState.Deny,
+      );
+
+      if (allApproved) {
+        getApprovalEngine().approveCurrentBatch();
+        this.hide();
+      } else if (allRejected) {
+        getApprovalEngine().rejectCurrentBatch();
+        this.hide();
+      }
+      // If mixed, keep the panel open for user to use batch actions
+    }
+  }
+
+  /**
+   * Build the HTML content for the webview
+   */
+  private static buildHtml(files: FilePreview[], batch: ActionBatch): string {
+    const fileListHtml = files
+      .map((file, index) => {
+        const approvalIcon = this.getApprovalIcon(file.approvalState);
+        const approvedClass =
+          file.approvalState === ApprovalState.Allow
+            ? "file-approved"
+            : file.approvalState === ApprovalState.Deny
+              ? "file-rejected"
+              : "";
+
+        return `
+            <div class="file-item ${approvedClass}" data-index="${index}">
                 <div class="file-header">
                     <span class="file-status status-${file.status}">${file.status.toUpperCase()}</span>
                     <span class="file-name">${this.escapeHtml(file.path)}</span>
+                    <span class="file-approval-state">${approvalIcon}</span>
                 </div>
                 <div class="file-content">
                     ${this.buildDiffContent(file)}
                 </div>
                 <div class="file-actions">
-                    <button class="btn btn-approve" onclick="approveFile(${index})">Approve</button>
-                    <button class="btn btn-reject" onclick="rejectFile(${index})">Reject</button>
+                    <button class="btn btn-approve" onclick="approveFile(${index})" ${file.approvalState === ApprovalState.Allow ? "disabled" : ""}>Approve</button>
+                    <button class="btn btn-reject" onclick="rejectFile(${index})" ${file.approvalState === ApprovalState.Deny ? "disabled" : ""}>Reject</button>
                 </div>
             </div>
-        `).join('');
+        `;
+      })
+      .join("");
 
-        return `
+    const approvedCount = files.filter(
+      (f) => f.approvalState === ApprovalState.Allow,
+    ).length;
+    const rejectedCount = files.filter(
+      (f) => f.approvalState === ApprovalState.Deny,
+    ).length;
+    const pendingCount = files.length - approvedCount - rejectedCount;
+
+    return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -219,6 +327,17 @@ export class DiffPreviewPanel {
             background-color: var(--vscode-editorWidget-background, #252526);
             border-radius: 6px;
             overflow: hidden;
+            transition: opacity 0.3s;
+        }
+        
+        .file-item.file-approved {
+            opacity: 0.6;
+            border-left: 3px solid #2ea043;
+        }
+        
+        .file-item.file-rejected {
+            opacity: 0.6;
+            border-left: 3px solid #f85149;
         }
         
         .file-header {
@@ -227,6 +346,11 @@ export class DiffPreviewPanel {
             gap: 10px;
             padding: 10px 15px;
             background-color: var(--vscode-editorWidget-border, #3c3c3c);
+        }
+        
+        .file-approval-state {
+            margin-left: auto;
+            font-size: 14px;
         }
         
         .file-status {
@@ -294,12 +418,17 @@ export class DiffPreviewPanel {
             transition: background-color 0.2s;
         }
         
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
         .btn-approve {
             background-color: #2ea043;
             color: white;
         }
         
-        .btn-approve:hover {
+        .btn-approve:hover:not(:disabled) {
             background-color: #3fb354;
         }
         
@@ -308,7 +437,7 @@ export class DiffPreviewPanel {
             color: white;
         }
         
-        .btn-reject:hover {
+        .btn-reject:hover:not(:disabled) {
             background-color: #ff6b6b;
         }
         
@@ -333,6 +462,27 @@ export class DiffPreviewPanel {
             padding: 10px 25px;
         }
         
+        .progress-bar {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 15px;
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-approved {
+            background-color: #2ea043;
+        }
+        
+        .progress-rejected {
+            background-color: #f85149;
+        }
+        
+        .progress-pending {
+            background-color: #3c3c3c;
+        }
+        
         .footer {
             margin-top: 20px;
             text-align: center;
@@ -349,6 +499,12 @@ export class DiffPreviewPanel {
         </div>
     </div>
     
+    <div class="progress-bar">
+        <div class="progress-approved" style="width: ${(approvedCount / files.length) * 100}%"></div>
+        <div class="progress-rejected" style="width: ${(rejectedCount / files.length) * 100}%"></div>
+        <div class="progress-pending" style="width: ${(pendingCount / files.length) * 100}%"></div>
+    </div>
+    
     <div class="summary">
         <div class="summary-item">
             <span class="summary-label">Total Files</span>
@@ -356,15 +512,27 @@ export class DiffPreviewPanel {
         </div>
         <div class="summary-item">
             <span class="summary-label">Added</span>
-            <span class="summary-value">${files.filter(f => f.status === 'added').length}</span>
+            <span class="summary-value">${files.filter((f) => f.status === "added").length}</span>
         </div>
         <div class="summary-item">
             <span class="summary-label">Modified</span>
-            <span class="summary-value">${files.filter(f => f.status === 'modified').length}</span>
+            <span class="summary-value">${files.filter((f) => f.status === "modified").length}</span>
         </div>
         <div class="summary-item">
             <span class="summary-label">Deleted</span>
-            <span class="summary-value">${files.filter(f => f.status === 'deleted').length}</span>
+            <span class="summary-value">${files.filter((f) => f.status === "deleted").length}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">✅ Approved</span>
+            <span class="summary-value">${approvedCount}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">❌ Rejected</span>
+            <span class="summary-value">${rejectedCount}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">⏳ Pending</span>
+            <span class="summary-value">${pendingCount}</span>
         </div>
     </div>
     
@@ -378,10 +546,11 @@ export class DiffPreviewPanel {
     </div>
     
     <div class="footer">
-        Universal Auto Accept Extension
+        Universal Auto Accept Extension — Review each file individually or use batch actions
     </div>
     
     <script>
+        const vscode = acquireVsCodeApi();
         const batchId = '${this.escapeHtml(batch.id)}';
         
         function approveBatch() {
@@ -396,7 +565,7 @@ export class DiffPreviewPanel {
             const fileItems = document.querySelectorAll('.file-item');
             if (fileItems[index]) {
                 const path = fileItems[index].querySelector('.file-name').textContent;
-                vscode.postMessage({ type: 'approveFile', filePath: path });
+                vscode.postMessage({ type: 'approveFile', filePath: path, batchId });
             }
         }
         
@@ -404,7 +573,7 @@ export class DiffPreviewPanel {
             const fileItems = document.querySelectorAll('.file-item');
             if (fileItems[index]) {
                 const path = fileItems[index].querySelector('.file-name').textContent;
-                vscode.postMessage({ type: 'rejectFile', filePath: path });
+                vscode.postMessage({ type: 'rejectFile', filePath: path, batchId });
             }
         }
         
@@ -413,114 +582,131 @@ export class DiffPreviewPanel {
     </script>
 </body>
 </html>`;
+  }
+
+  /**
+   * Get icon for approval state
+   */
+  private static getApprovalIcon(state?: ApprovalState): string {
+    switch (state) {
+      case ApprovalState.Allow:
+        return "✅";
+      case ApprovalState.Deny:
+        return "❌";
+      case ApprovalState.Ask:
+        return "❓";
+      default:
+        return "⏳";
+    }
+  }
+
+  /**
+   * Build diff content for a file
+   */
+  private static buildDiffContent(file: FilePreview): string {
+    if (file.status === "deleted") {
+      return '<span class="deleted">File marked for deletion</span>';
     }
 
-    /**
-     * Build diff content for a file
-     */
-    private static buildDiffContent(file: FilePreview): string {
-        if (file.status === 'deleted') {
-            return '<span class="deleted">File marked for deletion</span>';
-        }
-
-        if (file.newContent) {
-            return `<span class="added">${this.escapeHtml(file.newContent)}</span>`;
-        }
-
-        return '<span>No preview available</span>';
+    if (file.newContent) {
+      return `<span class="added">${this.escapeHtml(file.newContent)}</span>`;
     }
 
-    /**
-     * Escape HTML special characters
-     */
-    private static escapeHtml(text: string): string {
-        const map: Record<string, string> = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-        return text.replace(/[&<>"']/g, m => map[m]);
-    }
+    return "<span>No preview available</span>";
+  }
 
-    /**
-     * Hide the panel
-     */
-    public static hide(): void {
-        if (this.panel) {
-            this.panel.dispose();
-            this.panel = null;
-            this.currentState = null;
-        }
-    }
+  /**
+   * Escape HTML special characters
+   */
+  private static escapeHtml(text: string): string {
+    const map: Record<string, string> = {
+      "&": "&",
+      "<": "<",
+      ">": ">",
+      '"': '"',
+      "'": "&#039;",
+    };
+    return text.replace(/[&<>"']/g, (m) => map[m]);
+  }
 
-    /**
-     * Get current state
-     */
-    public static getCurrentState(): DiffPreviewState | null {
-        return this.currentState;
+  /**
+   * Hide the panel
+   */
+  public static hide(): void {
+    if (this.panel) {
+      this.panel.dispose();
+      this.panel = null;
+      this.currentState = null;
     }
+  }
 
-    /**
-     * Check if panel is visible
-     */
-    public static isVisible(): boolean {
-        return this.panel !== null;
+  /**
+   * Get current state
+   */
+  public static getCurrentState(): DiffPreviewState | null {
+    return this.currentState;
+  }
+
+  /**
+   * Check if panel is visible
+   */
+  public static isVisible(): boolean {
+    return this.panel !== null;
+  }
+
+  /**
+   * Update the panel with new batch
+   */
+  public static update(batch: ActionBatch): void {
+    if (this.panel && this.currentState) {
+      const files = this.buildFilePreviews(batch);
+      const fileApprovalStates = new Map<string, ApprovalState>();
+      for (const file of files) {
+        fileApprovalStates.set(file.path, ApprovalState.Ask);
+      }
+      this.currentState = { batch, files, fileApprovalStates };
+      this.panel.webview.html = this.buildHtml(files, batch);
     }
+  }
 
-    /**
-     * Update the panel with new batch
-     */
-    public static update(batch: ActionBatch): void {
-        if (this.panel && this.currentState) {
-            const files = this.buildFilePreviews(batch);
-            this.currentState = { batch, files };
-            this.panel.webview.html = this.buildHtml(files, batch);
-        }
+  /**
+   * Show notification for pending actions
+   */
+  public static showPendingNotification(): void {
+    const approvalEngine = getApprovalEngine();
+    const pendingCount = approvalEngine.getPendingCount();
+
+    if (pendingCount > 0) {
+      vscode.window
+        .showInformationMessage(
+          `Universal Auto Accept: ${pendingCount} action(s) pending approval`,
+          "View Diff",
+          "Approve All",
+          "Reject All",
+        )
+        .then(async (choice: string | undefined) => {
+          const batch = approvalEngine.getCurrentBatch();
+          if (batch) {
+            switch (choice) {
+              case "View Diff":
+                this.show(batch);
+                break;
+              case "Approve All":
+                await approvalEngine.approveCurrentBatch();
+                break;
+              case "Reject All":
+                await approvalEngine.rejectCurrentBatch();
+                break;
+            }
+          }
+        });
     }
-
-    /**
-     * Show notification for pending actions
-     */
-    public static showPendingNotification(): void {
-        const approvalEngine = getApprovalEngine();
-        const pendingCount = approvalEngine.getPendingCount();
-
-        if (pendingCount > 0) {
-            vscode.window.showInformationMessage(
-                `Universal Auto Accept: ${pendingCount} action(s) pending approval`,
-                'View Diff', 'Approve All', 'Reject All'
-            ).then(async (choice) => {
-                const batch = approvalEngine.getCurrentBatch();
-                if (batch) {
-                    switch (choice) {
-                        case 'View Diff':
-                            this.show(batch);
-                            break;
-                        case 'Approve All':
-                            await approvalEngine.approveCurrentBatch();
-                            break;
-                        case 'Reject All':
-                            await approvalEngine.rejectCurrentBatch();
-                            break;
-                    }
-                }
-            });
-        }
-    }
+  }
 }
 
 /**
  * Helper to show diff preview
  */
-export function showDiffPreview(): void {
-    const approvalEngine = getApprovalEngine();
-    const batch = approvalEngine.getCurrentBatch();
-
-    if (batch) {
-        DiffPreviewPanel.show(batch);
-    } else {
-        vscode.window.showInformationMessage('No pending actions to preview');
-    }
+export function showDiffPreview(batch: ActionBatch): void {
+  DiffPreviewPanel.show(batch);
 }

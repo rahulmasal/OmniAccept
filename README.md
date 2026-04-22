@@ -6,7 +6,7 @@
 ![Installs](https://img.shields.io/visual-studio-marketplace/i/universal-auto-accept?label=installs&color=green)
 ![License](https://img.shields.io/badge/license-MIT-yellow)
 ![Build Status](https://img.shields.io/badge/build-retired-red)
-![Made with ❤️ by Omni Enterprise](https://img.shields.io/badge/Made%20with%20%E2%9D%A4%EF%B8%8F%20by%20Omni%20Enterprise-Rahul%20Masal-orange)
+![Made with ❤️ by Rahul Masal](https://img.shields.io/badge/Made%20with%20%E2%9D%A4%EF%B8%8F%20by%20Rahul%20Masal-orange)
 
 <!-- TABLE -->
 | | |
@@ -32,7 +32,7 @@ code --install-extension universal-auto-accept.vsix
 
 **Option 3: Build from Source**
 ```bash
-git clone https://github.com/omni-enterprise/universal-auto-accept.git
+git clone https://github.com/rahulmasal/universal-auto-accept.git
 cd universal-auto-accept
 npm install
 npm run compile && npm run package
@@ -420,7 +420,7 @@ Special thanks to the teams behind:
 
 <div align="center">
 
-**Made with ❤️ by [Omni Enterprise](https://omni-enterprise.dev)**
+**Made with ❤️ by [Rahul Masal](https://github.com/rahulmasal)**
 
 ⭐ Star this project if it helps you!
 

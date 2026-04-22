@@ -1,9 +1,9 @@
 {
   "name": "universal-auto-accept",
-  "displayName": "Universal Auto Accept",
-  "description": "Generic approval management system for AI coding extensions like Roo Code and Kilo Code. Provides auto-approval for safe actions while protecting against destructive or sensitive operations.",
-  "version": "1.0.0",
-  "publisher": "universal-auto-accept",
+  "displayName": "OmniAccept",
+  "description": "Generic approval management system for AI coding extensions like Roo Code, Kilo Code, Cline, and Continue. Provides auto-approval for safe actions while protecting against destructive or sensitive operations.",
+  "version": "2.0.0",
+  "publisher": "omni-accept",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -17,6 +17,8 @@
     "ai-assistant",
     "roo-code",
     "kilo-code",
+    "cline",
+    "continue",
     "code-review"
   ],
   "activationEvents": [
@@ -25,7 +27,7 @@
   "main": "./dist/extension.js",
   "contributes": {
     "configuration": {
-      "title": "Universal Auto Accept",
+      "title": "OmniAccept",
       "properties": {
         "universalAutoAccept.enabled": {
           "type": "boolean",
@@ -41,7 +43,11 @@
         },
         "universalAutoAccept.defaultPolicy": {
           "type": "string",
-          "enum": ["allow", "ask", "deny"],
+          "enum": [
+            "allow",
+            "ask",
+            "deny"
+          ],
           "default": "ask",
           "scope": "application",
           "description": "Default policy for actions that don't match any specific rule."
@@ -50,7 +56,9 @@
           "type": "object",
           "default": {
             "rooCode": true,
-            "kiloCode": true
+            "kiloCode": true,
+            "cline": true,
+            "continue": true
           },
           "scope": "application",
           "description": "Enable or disable specific adapter integrations.",
@@ -64,6 +72,16 @@
               "type": "boolean",
               "default": true,
               "description": "Enable Kilo Code adapter"
+            },
+            "cline": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable Cline adapter"
+            },
+            "continue": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable Continue adapter"
             }
           }
         },
@@ -86,61 +104,101 @@
           "properties": {
             "readFiles": {
               "type": "string",
-              "enum": ["allow", "ask", "deny"],
+              "enum": [
+                "allow",
+                "ask",
+                "deny"
+              ],
               "default": "allow",
               "description": "Reading files from the workspace"
             },
             "editFiles": {
               "type": "string",
-              "enum": ["allow", "ask", "deny"],
+              "enum": [
+                "allow",
+                "ask",
+                "deny"
+              ],
               "default": "allow",
               "description": "Editing existing files in the workspace"
             },
             "createFiles": {
               "type": "string",
-              "enum": ["allow", "ask", "deny"],
+              "enum": [
+                "allow",
+                "ask",
+                "deny"
+              ],
               "default": "ask",
               "description": "Creating new files in the workspace"
             },
             "deleteFiles": {
               "type": "string",
-              "enum": ["allow", "ask", "deny"],
+              "enum": [
+                "allow",
+                "ask",
+                "deny"
+              ],
               "default": "deny",
               "description": "Deleting files from the workspace"
             },
             "renameFiles": {
               "type": "string",
-              "enum": ["allow", "ask", "deny"],
+              "enum": [
+                "allow",
+                "ask",
+                "deny"
+              ],
               "default": "ask",
               "description": "Renaming files in the workspace"
             },
             "terminalCommand": {
               "type": "string",
-              "enum": ["allow", "ask", "deny"],
+              "enum": [
+                "allow",
+                "ask",
+                "deny"
+              ],
               "default": "deny",
               "description": "Executing terminal commands"
             },
             "browserTool": {
               "type": "string",
-              "enum": ["allow", "ask", "deny"],
+              "enum": [
+                "allow",
+                "ask",
+                "deny"
+              ],
               "default": "deny",
               "description": "Browser automation actions"
             },
             "mcpToolAccess": {
               "type": "string",
-              "enum": ["allow", "ask", "deny"],
+              "enum": [
+                "allow",
+                "ask",
+                "deny"
+              ],
               "default": "deny",
               "description": "Access to Model Context Protocol tools"
             },
             "externalDirectoryAccess": {
               "type": "string",
-              "enum": ["allow", "ask", "deny"],
+              "enum": [
+                "allow",
+                "ask",
+                "deny"
+              ],
               "default": "deny",
               "description": "Accessing directories outside the workspace"
             },
             "sensitiveFileAccess": {
               "type": "string",
-              "enum": ["allow", "ask", "deny"],
+              "enum": [
+                "allow",
+                "ask",
+                "deny"
+              ],
               "default": "deny",
               "description": "Accessing files containing secrets, keys, or credentials"
             }
@@ -152,26 +210,33 @@
             "type": "string"
           },
           "default": [
-            "**/.env*",
             "**/.env",
             "**/.env.*",
             "**/.ssh/**",
-            "**/id_*",
-            "**/*secret*",
-            "**/*token*",
-            "**/*key*",
-            "**/credentials*",
+            "**/id_rsa*",
+            "**/id_ed25519*",
+            "**/id_ecdsa*",
             "**/*.pem",
             "**/*.key",
+            "**/*.p12",
+            "**/*.pfx",
+            "**/credentials",
+            "**/credentials.json",
             "**/secrets.json",
             "**/secrets.yaml",
+            "**/secrets.yml",
             "**/*.credentials",
             "**/aws*.json",
             "**/azure*.json",
-            "**/*password*"
+            "**/gcloud*.json",
+            "**/service-account*.json",
+            "**/.npmrc",
+            "**/.pypirc",
+            "**/.netrc",
+            "**/htpasswd"
           ],
           "scope": "application",
-          "description": "Glob patterns for files considered sensitive (secrets, keys, credentials)."
+          "description": "Glob patterns for files considered sensitive (secrets, keys, credentials). Avoid overly broad patterns like '**/*key*' to reduce false positives."
         },
         "universalAutoAccept.maxUndoBatchSize": {
           "type": "number",
@@ -187,14 +252,24 @@
         },
         "universalAutoAccept.logLevel": {
           "type": "string",
-          "enum": ["off", "error", "warn", "info", "debug"],
+          "enum": [
+            "off",
+            "error",
+            "warn",
+            "info",
+            "debug"
+          ],
           "default": "info",
           "scope": "application",
           "description": "Logging verbosity level."
         },
         "universalAutoAccept.statusBarMode": {
           "type": "string",
-          "enum": ["on", "ask", "off"],
+          "enum": [
+            "on",
+            "ask",
+            "off"
+          ],
           "default": "on",
           "scope": "application",
           "description": "Current mode displayed in the status bar."
@@ -210,57 +285,339 @@
           "default": 300,
           "scope": "application",
           "description": "Timeout in seconds before auto-deny in ASK mode. Set to 0 for no timeout."
+        },
+        "universalAutoAccept.audioNotifications": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Play audio cues when actions are approved, denied, or require user input."
+        },
+        "universalAutoAccept.audioVolume": {
+          "type": "number",
+          "default": 50,
+          "minimum": 0,
+          "maximum": 100,
+          "scope": "application",
+          "description": "Volume level for audio notifications (0-100). Only applies when audioNotifications is enabled."
+        },
+        "universalAutoAccept.useGitUndo": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Use git-based undo when available for more reliable change reversion. Falls back to file-level undo if git is not available."
+        },
+        "universalAutoAccept.gitUndoDryRun": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "When enabled, git undo operations will only show what would be reverted without actually reverting."
+        },
+        "universalAutoAccept.conditionalRules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pattern": {
+                "type": "string",
+                "description": "Glob pattern for file paths this rule applies to"
+              },
+              "policy": {
+                "type": "string",
+                "enum": [
+                  "allow",
+                  "ask",
+                  "deny"
+                ],
+                "description": "Approval policy for matching paths"
+              },
+              "actionTypes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "editFiles",
+                    "createFiles",
+                    "deleteFiles",
+                    "renameFiles",
+                    "terminalCommand",
+                    "mcpToolAccess",
+                    "sensitiveFileAccess"
+                  ]
+                },
+                "description": "Action types this rule applies to. If empty, applies to all types."
+              },
+              "adapterName": {
+                "type": "string",
+                "description": "Only apply this rule for the specified adapter (e.g., 'Roo Code'). If empty, applies to all adapters."
+              }
+            },
+            "required": [
+              "pattern",
+              "policy"
+            ]
+          },
+          "default": [],
+          "scope": "application",
+          "description": "Conditional rules that override action rules based on file path patterns, action types, and adapter names. Rules are evaluated in order; first match wins."
+        },
+        "universalAutoAccept.terminalWhitelist": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pattern": {
+                "type": "string",
+                "description": "Pattern to match (glob-style or regex with /regex/ format)"
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-readable description of what this pattern allows"
+              }
+            },
+            "required": [
+              "pattern"
+            ]
+          },
+          "default": [],
+          "scope": "application",
+          "description": "Terminal command patterns that are always allowed, regardless of the terminalCommand action rule. Whitelist takes priority over blacklist."
+        },
+        "universalAutoAccept.terminalBlacklist": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pattern": {
+                "type": "string",
+                "description": "Pattern to match (glob-style or regex with /regex/ format)"
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-readable description of what this pattern blocks"
+              }
+            },
+            "required": [
+              "pattern"
+            ]
+          },
+          "default": [],
+          "scope": "application",
+          "description": "Terminal command patterns that are always denied, even if the terminalCommand action rule is set to 'allow'. Useful for blocking dangerous commands."
+        },
+        "universalAutoAccept.maxAutoApprovesPerMinute": {
+          "type": "number",
+          "default": 30,
+          "minimum": 0,
+          "scope": "application",
+          "description": "Maximum number of auto-approves per minute. Set to 0 for no rate limit. When exceeded, the rateLimitAction determines behavior."
+        },
+        "universalAutoAccept.maxAutoApprovesPerSession": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "scope": "application",
+          "description": "Maximum number of auto-approves per session. Set to 0 for no session limit. When exceeded, the user is prompted to reset."
+        },
+        "universalAutoAccept.rateLimitAction": {
+          "type": "string",
+          "enum": [
+            "ask",
+            "pause",
+            "off"
+          ],
+          "default": "ask",
+          "scope": "application",
+          "description": "What to do when the auto-approve rate limit is exceeded. 'ask' prompts the user, 'pause' pauses auto-approve, 'off' disables the extension."
+        },
+        "universalAutoAccept.autoApproveBudget": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "scope": "application",
+          "description": "Total number of auto-approves allowed before requiring manual reset. Set to 0 for no budget limit."
+        },
+        "universalAutoAccept.changeDebounceMs": {
+          "type": "number",
+          "default": 500,
+          "minimum": 0,
+          "maximum": 5000,
+          "scope": "application",
+          "description": "Debounce window in milliseconds for coalescing rapid file changes from generic adapters. Set to 0 to disable debouncing."
+        },
+        "universalAutoAccept.maxHistorySize": {
+          "type": "number",
+          "default": 500,
+          "minimum": 0,
+          "maximum": 10000,
+          "scope": "application",
+          "description": "Maximum number of action history entries to retain. Set to 0 to disable history."
+        },
+        "universalAutoAccept.ignoreWorkspaceConfig": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Ignore .omniaccept.json workspace configuration files. When enabled, only global settings are used."
+        },
+        "universalAutoAccept.enableTelemetry": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Enable opt-in telemetry. Only anonymous usage data is collected — no file paths, content, or personal information. Respects VS Code's global telemetry setting."
+        },
+        "universalAutoAccept.configVersion": {
+          "type": "number",
+          "default": 1,
+          "scope": "application",
+          "description": "Internal configuration version for migration support. Do not modify manually."
         }
       }
     },
     "commands": [
       {
         "command": "universalAutoAccept.toggleEnabled",
-        "title": "Universal Auto Accept: Toggle Enabled",
-        "category": "Universal Auto Accept",
+        "title": "OmniAccept: Toggle Enabled",
+        "category": "OmniAccept",
         "description": "Toggle the extension on or off"
       },
       {
         "command": "universalAutoAccept.openSettings",
-        "title": "Universal Auto Accept: Open Settings",
-        "category": "Universal Auto Accept",
+        "title": "OmniAccept: Open Settings",
+        "category": "OmniAccept",
         "description": "Open extension settings"
       },
       {
         "command": "universalAutoAccept.approveCurrentBatch",
-        "title": "Universal Auto Accept: Approve Current Batch",
-        "category": "Universal Auto Accept",
+        "title": "OmniAccept: Approve Current Batch",
+        "category": "OmniAccept",
         "description": "Approve all pending actions in the current batch"
       },
       {
         "command": "universalAutoAccept.rejectCurrentBatch",
-        "title": "Universal Auto Accept: Reject Current Batch",
-        "category": "Universal Auto Accept",
+        "title": "OmniAccept: Reject Current Batch",
+        "category": "OmniAccept",
         "description": "Reject all pending actions in the current batch"
       },
       {
         "command": "universalAutoAccept.showActiveAdapter",
-        "title": "Universal Auto Accept: Show Active Adapter",
-        "category": "Universal Auto Accept",
+        "title": "OmniAccept: Show Active Adapter",
+        "category": "OmniAccept",
         "description": "Display information about the currently active adapter"
       },
       {
         "command": "universalAutoAccept.rescanAdapters",
-        "title": "Universal Auto Accept: Rescan Compatible Extensions",
-        "category": "Universal Auto Accept",
+        "title": "OmniAccept: Rescan Compatible Extensions",
+        "category": "OmniAccept",
         "description": "Re-scan for compatible AI coding extensions"
       },
       {
         "command": "universalAutoAccept.undoLastBatch",
-        "title": "Universal Auto Accept: Undo Last Batch",
-        "category": "Universal Auto Accept",
+        "title": "OmniAccept: Undo Last Batch",
+        "category": "OmniAccept",
         "description": "Revert changes from the last approved batch"
       },
       {
         "command": "universalAutoAccept.showDiffPreview",
-        "title": "Universal Auto Accept: Show Diff Preview",
-        "category": "Universal Auto Accept",
+        "title": "OmniAccept: Show Diff Preview",
+        "category": "OmniAccept",
         "description": "Show diff preview of pending changes"
+      },
+      {
+        "command": "universalAutoAccept.showHistory",
+        "title": "OmniAccept: Show Action History",
+        "category": "OmniAccept",
+        "description": "View recent action approval history"
+      },
+      {
+        "command": "universalAutoAccept.clearHistory",
+        "title": "OmniAccept: Clear Action History",
+        "category": "OmniAccept",
+        "description": "Clear all stored action history entries"
+      },
+      {
+        "command": "universalAutoAccept.exportHistory",
+        "title": "OmniAccept: Export Action History",
+        "category": "OmniAccept",
+        "description": "Export action history as a JSON file"
+      },
+      {
+        "command": "universalAutoAccept.showAnalytics",
+        "title": "OmniAccept: Show Approval Analytics",
+        "category": "OmniAccept",
+        "description": "Display approval rate analytics and statistics"
+      },
+      {
+        "command": "universalAutoAccept.scaffoldWorkspaceConfig",
+        "title": "OmniAccept: Create Workspace Config",
+        "category": "OmniAccept",
+        "description": "Create a .omniaccept.json workspace configuration file with defaults"
+      },
+      {
+        "command": "universalAutoAccept.openWorkspaceConfig",
+        "title": "OmniAccept: Open Workspace Config",
+        "category": "OmniAccept",
+        "description": "Open the .omniaccept.json workspace configuration file"
+      },
+      {
+        "command": "universalAutoAccept.validateSettings",
+        "title": "OmniAccept: Validate Settings",
+        "category": "OmniAccept",
+        "description": "Validate current settings and show any errors or warnings"
+      },
+      {
+        "command": "universalAutoAccept.resetSettings",
+        "title": "OmniAccept: Reset to Defaults",
+        "category": "OmniAccept",
+        "description": "Reset all settings to their default values"
+      },
+      {
+        "command": "universalAutoAccept.testPattern",
+        "title": "OmniAccept: Test Pattern",
+        "category": "OmniAccept",
+        "description": "Test a glob pattern against file paths to see if it matches"
+      },
+      {
+        "command": "universalAutoAccept.resetSessionBudget",
+        "title": "OmniAccept: Reset Session Budget",
+        "category": "OmniAccept",
+        "description": "Reset the session auto-approve budget counter"
+      },
+      {
+        "command": "universalAutoAccept.refreshTreeView",
+        "title": "OmniAccept: Refresh Tree View",
+        "category": "OmniAccept",
+        "description": "Refresh the OmniAccept sidebar tree view",
+        "icon": "$(refresh)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "universalAutoAccept.approveCurrentBatch",
+        "key": "ctrl+shift+alt+a",
+        "mac": "cmd+shift+alt+a",
+        "when": "universalAutoAccept:isActive && universalAutoAccept:hasPendingActions"
+      },
+      {
+        "command": "universalAutoAccept.rejectCurrentBatch",
+        "key": "ctrl+shift+alt+r",
+        "mac": "cmd+shift+alt+r",
+        "when": "universalAutoAccept:isActive && universalAutoAccept:hasPendingActions"
+      },
+      {
+        "command": "universalAutoAccept.undoLastBatch",
+        "key": "ctrl+shift+alt+z",
+        "mac": "cmd+shift+alt+z",
+        "when": "universalAutoAccept:isActive && universalAutoAccept:hasUndoHistory"
+      },
+      {
+        "command": "universalAutoAccept.showDiffPreview",
+        "key": "ctrl+shift+alt+d",
+        "mac": "cmd+shift+alt+d",
+        "when": "universalAutoAccept:isActive && universalAutoAccept:hasPendingActions"
+      },
+      {
+        "command": "universalAutoAccept.toggleEnabled",
+        "key": "ctrl+shift+alt+t",
+        "mac": "cmd+shift+alt+t"
       }
     ],
     "menus": {
@@ -303,9 +660,77 @@
         {
           "command": "universalAutoAccept.showDiffPreview",
           "when": "universalAutoAccept:isActive && universalAutoAccept:hasPendingActions"
+        },
+        {
+          "command": "universalAutoAccept.showHistory",
+          "when": "universalAutoAccept:isActive"
+        },
+        {
+          "command": "universalAutoAccept.clearHistory",
+          "when": "universalAutoAccept:isActive"
+        },
+        {
+          "command": "universalAutoAccept.exportHistory",
+          "when": "universalAutoAccept:isActive"
+        },
+        {
+          "command": "universalAutoAccept.showAnalytics",
+          "when": "universalAutoAccept:isActive"
+        },
+        {
+          "command": "universalAutoAccept.scaffoldWorkspaceConfig",
+          "when": "universalAutoAccept:isActive"
+        },
+        {
+          "command": "universalAutoAccept.openWorkspaceConfig",
+          "when": "universalAutoAccept:isActive"
+        },
+        {
+          "command": "universalAutoAccept.validateSettings",
+          "when": "universalAutoAccept:isActive"
+        },
+        {
+          "command": "universalAutoAccept.resetSettings",
+          "when": "universalAutoAccept:isActive"
+        },
+        {
+          "command": "universalAutoAccept.testPattern",
+          "when": "universalAutoAccept:isActive"
+        },
+        {
+          "command": "universalAutoAccept.resetSessionBudget",
+          "when": "universalAutoAccept:isActive"
+        },
+        {
+          "command": "universalAutoAccept.refreshTreeView",
+          "when": "universalAutoAccept:isActive"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "universalAutoAccept.refreshTreeView",
+          "when": "view == omniAcceptTreeView",
+          "group": "navigation"
         }
       ]
     },
+    "views": {
+      "explorer": [
+        {
+          "id": "omniAcceptTreeView",
+          "name": "OmniAccept",
+          "icon": "resources/icon.svg",
+          "when": "universalAutoAccept:isActive"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "omniAcceptTreeView",
+        "contents": "No AI coding adapter detected.\n[Rescan Adapters](command:universalAutoAccept.rescanAdapters)\n[Open Settings](command:universalAutoAccept.openSettings)",
+        "when": "universalAutoAccept:isActive"
+      }
+    ],
     "statusBar": {
       "id": "universalAutoAccept.statusBar",
       "priority": 100,
