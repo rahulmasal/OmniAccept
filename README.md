@@ -1,11 +1,12 @@
-# 🎯 Universal Auto Accept
+# 🎯 OmniAccept
 
 > **Smart approval management for AI coding assistants** — Auto-approve safe actions, protect against dangerous ones.
 
-[![Version](https://img.shields.io/visual-studio-marketplace/v/universal-auto-accept?color=4CAF50&label=Version)](https://marketplace.visualstudio.com/items?itemName=universal-auto-accept)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/universal-auto-accept?color=blue)](https://marketplace.visualstudio.com/items?itemName=universal-auto-accept)
-[![License](https://img.shields.io/github/license/omni-enterprise/universal-auto-accept?color=purple)](LICENSE)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/omni-enterprise/universal-auto-accept/ci.yml?branch=main)](https://github.com/omni-enterprise/universal-auto-accept/actions)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Installs](https://img.shields.io/visual-studio-marketplace/i/universal-auto-accept?label=installs&color=green)
+![License](https://img.shields.io/badge/license-MIT-yellow)
+![Build Status](https://img.shields.io/badge/build-retired-red)
+![Made with ❤️ by Omni Enterprise](https://img.shields.io/badge/Made%20with%20%E2%9D%A4%EF%B8%8F%20by%20Omni%20Enterprise-Rahul%20Masal-orange)
 
 <!-- TABLE -->
 | | |
