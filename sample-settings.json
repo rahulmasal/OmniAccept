@@ -1,0 +1,64 @@
+{
+  "//": "Universal Auto Accept - Sample Settings",
+  "//": "Copy this to your settings.json (File > Preferences > Settings > Open Settings JSON)",
+
+  "universalAutoAccept.enabled": true,
+  
+  "universalAutoAccept.trustedWorkspaceOnly": true,
+  
+  "universalAutoAccept.defaultPolicy": "ask",
+  
+  "universalAutoAccept.adapterSettings": {
+    "rooCode": true,
+    "kiloCode": true
+  },
+  
+  "universalAutoAccept.actionRules": {
+    "readFiles": "allow",
+    "editFiles": "allow",
+    "createFiles": "ask",
+    "deleteFiles": "deny",
+    "renameFiles": "ask",
+    "terminalCommand": "deny",
+    "browserTool": "deny",
+    "mcpToolAccess": "deny",
+    "externalDirectoryAccess": "deny",
+    "sensitiveFileAccess": "deny"
+  },
+  
+  "universalAutoAccept.sensitiveFilePatterns": [
+    "**/.env*",
+    "**/.env",
+    "**/.env.*",
+    "**/.gitignore",
+    "**/.dockerignore",
+    "**/.ssh/**",
+    "**/id_*",
+    "**/*secret*",
+    "**/*token*",
+    "**/*key*",
+    "**/credentials*",
+    "**/*.pem",
+    "**/*.key",
+    "**/secrets.json",
+    "**/secrets.yaml",
+    "**/*.credentials",
+    "**/aws*.json",
+    "**/azure*.json",
+    "**/*password*",
+    "**/config*.json",
+    "**/settings*.json"
+  ],
+  
+  "universalAutoAccept.maxUndoBatchSize": 10,
+  
+  "universalAutoAccept.autoApproveDelay": 0,
+  
+  "universalAutoAccept.logLevel": "info",
+  
+  "universalAutoAccept.statusBarMode": "on",
+  
+  "universalAutoAccept.showNotifications": true,
+  
+  "universalAutoAccept.askModeTimeout": 300
+}

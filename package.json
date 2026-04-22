@@ -1,0 +1,333 @@
+{
+  "name": "universal-auto-accept",
+  "displayName": "Universal Auto Accept",
+  "description": "Generic approval management system for AI coding extensions like Roo Code and Kilo Code. Provides auto-approval for safe actions while protecting against destructive or sensitive operations.",
+  "version": "1.0.0",
+  "publisher": "universal-auto-accept",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "AI"
+  ],
+  "keywords": [
+    "auto-accept",
+    "approval",
+    "ai-assistant",
+    "roo-code",
+    "kilo-code",
+    "code-review"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Universal Auto Accept",
+      "properties": {
+        "universalAutoAccept.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Enable or disable the extension. When disabled, all actions will be denied."
+        },
+        "universalAutoAccept.trustedWorkspaceOnly": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Only auto-approve actions in trusted workspaces. Untrusted workspaces will always prompt."
+        },
+        "universalAutoAccept.defaultPolicy": {
+          "type": "string",
+          "enum": ["allow", "ask", "deny"],
+          "default": "ask",
+          "scope": "application",
+          "description": "Default policy for actions that don't match any specific rule."
+        },
+        "universalAutoAccept.adapterSettings": {
+          "type": "object",
+          "default": {
+            "rooCode": true,
+            "kiloCode": true
+          },
+          "scope": "application",
+          "description": "Enable or disable specific adapter integrations.",
+          "properties": {
+            "rooCode": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable Roo Code adapter"
+            },
+            "kiloCode": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable Kilo Code adapter"
+            }
+          }
+        },
+        "universalAutoAccept.actionRules": {
+          "type": "object",
+          "default": {
+            "readFiles": "allow",
+            "editFiles": "allow",
+            "createFiles": "ask",
+            "deleteFiles": "deny",
+            "renameFiles": "ask",
+            "terminalCommand": "deny",
+            "browserTool": "deny",
+            "mcpToolAccess": "deny",
+            "externalDirectoryAccess": "deny",
+            "sensitiveFileAccess": "deny"
+          },
+          "scope": "application",
+          "description": "Approval rules for different action types.",
+          "properties": {
+            "readFiles": {
+              "type": "string",
+              "enum": ["allow", "ask", "deny"],
+              "default": "allow",
+              "description": "Reading files from the workspace"
+            },
+            "editFiles": {
+              "type": "string",
+              "enum": ["allow", "ask", "deny"],
+              "default": "allow",
+              "description": "Editing existing files in the workspace"
+            },
+            "createFiles": {
+              "type": "string",
+              "enum": ["allow", "ask", "deny"],
+              "default": "ask",
+              "description": "Creating new files in the workspace"
+            },
+            "deleteFiles": {
+              "type": "string",
+              "enum": ["allow", "ask", "deny"],
+              "default": "deny",
+              "description": "Deleting files from the workspace"
+            },
+            "renameFiles": {
+              "type": "string",
+              "enum": ["allow", "ask", "deny"],
+              "default": "ask",
+              "description": "Renaming files in the workspace"
+            },
+            "terminalCommand": {
+              "type": "string",
+              "enum": ["allow", "ask", "deny"],
+              "default": "deny",
+              "description": "Executing terminal commands"
+            },
+            "browserTool": {
+              "type": "string",
+              "enum": ["allow", "ask", "deny"],
+              "default": "deny",
+              "description": "Browser automation actions"
+            },
+            "mcpToolAccess": {
+              "type": "string",
+              "enum": ["allow", "ask", "deny"],
+              "default": "deny",
+              "description": "Access to Model Context Protocol tools"
+            },
+            "externalDirectoryAccess": {
+              "type": "string",
+              "enum": ["allow", "ask", "deny"],
+              "default": "deny",
+              "description": "Accessing directories outside the workspace"
+            },
+            "sensitiveFileAccess": {
+              "type": "string",
+              "enum": ["allow", "ask", "deny"],
+              "default": "deny",
+              "description": "Accessing files containing secrets, keys, or credentials"
+            }
+          }
+        },
+        "universalAutoAccept.sensitiveFilePatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/.env*",
+            "**/.env",
+            "**/.env.*",
+            "**/.ssh/**",
+            "**/id_*",
+            "**/*secret*",
+            "**/*token*",
+            "**/*key*",
+            "**/credentials*",
+            "**/*.pem",
+            "**/*.key",
+            "**/secrets.json",
+            "**/secrets.yaml",
+            "**/*.credentials",
+            "**/aws*.json",
+            "**/azure*.json",
+            "**/*password*"
+          ],
+          "scope": "application",
+          "description": "Glob patterns for files considered sensitive (secrets, keys, credentials)."
+        },
+        "universalAutoAccept.maxUndoBatchSize": {
+          "type": "number",
+          "default": 10,
+          "scope": "application",
+          "description": "Maximum number of files to include in a single undo batch."
+        },
+        "universalAutoAccept.autoApproveDelay": {
+          "type": "number",
+          "default": 0,
+          "scope": "application",
+          "description": "Delay in milliseconds before auto-approving low-risk actions. Set to 0 for immediate approval."
+        },
+        "universalAutoAccept.logLevel": {
+          "type": "string",
+          "enum": ["off", "error", "warn", "info", "debug"],
+          "default": "info",
+          "scope": "application",
+          "description": "Logging verbosity level."
+        },
+        "universalAutoAccept.statusBarMode": {
+          "type": "string",
+          "enum": ["on", "ask", "off"],
+          "default": "on",
+          "scope": "application",
+          "description": "Current mode displayed in the status bar."
+        },
+        "universalAutoAccept.showNotifications": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Show desktop notifications for approval prompts."
+        },
+        "universalAutoAccept.askModeTimeout": {
+          "type": "number",
+          "default": 300,
+          "scope": "application",
+          "description": "Timeout in seconds before auto-deny in ASK mode. Set to 0 for no timeout."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "universalAutoAccept.toggleEnabled",
+        "title": "Universal Auto Accept: Toggle Enabled",
+        "category": "Universal Auto Accept",
+        "description": "Toggle the extension on or off"
+      },
+      {
+        "command": "universalAutoAccept.openSettings",
+        "title": "Universal Auto Accept: Open Settings",
+        "category": "Universal Auto Accept",
+        "description": "Open extension settings"
+      },
+      {
+        "command": "universalAutoAccept.approveCurrentBatch",
+        "title": "Universal Auto Accept: Approve Current Batch",
+        "category": "Universal Auto Accept",
+        "description": "Approve all pending actions in the current batch"
+      },
+      {
+        "command": "universalAutoAccept.rejectCurrentBatch",
+        "title": "Universal Auto Accept: Reject Current Batch",
+        "category": "Universal Auto Accept",
+        "description": "Reject all pending actions in the current batch"
+      },
+      {
+        "command": "universalAutoAccept.showActiveAdapter",
+        "title": "Universal Auto Accept: Show Active Adapter",
+        "category": "Universal Auto Accept",
+        "description": "Display information about the currently active adapter"
+      },
+      {
+        "command": "universalAutoAccept.rescanAdapters",
+        "title": "Universal Auto Accept: Rescan Compatible Extensions",
+        "category": "Universal Auto Accept",
+        "description": "Re-scan for compatible AI coding extensions"
+      },
+      {
+        "command": "universalAutoAccept.undoLastBatch",
+        "title": "Universal Auto Accept: Undo Last Batch",
+        "category": "Universal Auto Accept",
+        "description": "Revert changes from the last approved batch"
+      },
+      {
+        "command": "universalAutoAccept.showDiffPreview",
+        "title": "Universal Auto Accept: Show Diff Preview",
+        "category": "Universal Auto Accept",
+        "description": "Show diff preview of pending changes"
+      }
+    ],
+    "menus": {
+      "statusBar": [
+        {
+          "command": "universalAutoAccept.toggleEnabled",
+          "when": "universalAutoAccept:isActive",
+          "group": "navigation@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "universalAutoAccept.toggleEnabled",
+          "when": "universalAutoAccept:isActive"
+        },
+        {
+          "command": "universalAutoAccept.openSettings",
+          "when": "universalAutoAccept:isActive"
+        },
+        {
+          "command": "universalAutoAccept.approveCurrentBatch",
+          "when": "universalAutoAccept:isActive && universalAutoAccept:hasPendingActions"
+        },
+        {
+          "command": "universalAutoAccept.rejectCurrentBatch",
+          "when": "universalAutoAccept:isActive && universalAutoAccept:hasPendingActions"
+        },
+        {
+          "command": "universalAutoAccept.showActiveAdapter",
+          "when": "universalAutoAccept:isActive"
+        },
+        {
+          "command": "universalAutoAccept.rescanAdapters",
+          "when": "universalAutoAccept:isActive"
+        },
+        {
+          "command": "universalAutoAccept.undoLastBatch",
+          "when": "universalAutoAccept:isActive && universalAutoAccept:hasUndoHistory"
+        },
+        {
+          "command": "universalAutoAccept.showDiffPreview",
+          "when": "universalAutoAccept:isActive && universalAutoAccept:hasPendingActions"
+        }
+      ]
+    },
+    "statusBar": {
+      "id": "universalAutoAccept.statusBar",
+      "priority": 100,
+      "alignment": "left"
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.0",
+    "vsce": "^2.14.0"
+  }
+}
