@@ -1,71 +1,224 @@
-# Universal Auto Accept
+# 🎯 Universal Auto Accept
 
-A VS Code extension that provides a generic approval management system for AI coding extensions like Roo Code and Kilo Code. Enables auto-approval of safe actions while protecting against destructive or sensitive operations.
+> **Smart approval management for AI coding assistants** — Auto-approve safe actions, protect against dangerous ones.
 
-## Features
+[![Version](https://img.shields.io/visual-studio-marketplace/v/universal-auto-accept?color=4CAF50&label=Version)](https://marketplace.visualstudio.com/items?itemName=universal-auto-accept)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/universal-auto-accept?color=blue)](https://marketplace.visualstudio.com/items?itemName=universal-auto-accept)
+[![License](https://img.shields.io/github/license/omni-enterprise/universal-auto-accept?color=purple)](LICENSE)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/omni-enterprise/universal-auto-accept/ci.yml?branch=main)](https://github.com/omni-enterprise/universal-auto-accept/actions)
 
-### Core Functionality
-- **Auto-Approve Safe Actions**: Automatically approve low-risk file edits within the workspace
-- **Risk-Based Approval**: Actions are categorized as Low/Medium/High risk with appropriate handling
-- **Batch Processing**: Group related actions for efficient approval/rejection
-- **Undo Support**: Revert changes from the last approved batch
+<!-- TABLE -->
+| | |
+|---|---|
+| **Works with** | 🦘 Roo Code · ⚡️ Kilo Code · 🤖 Any AI assistant |
+| **VS Code** | 1.85+ |
+| **License** | MIT |
 
-### Adapter System
-- **Roo Code Adapter**: Native support for Roo Code extension
-- **Kilo Code Adapter**: Native support for Kilo Code extension
-- **Generic Adapter**: Fallback adapter using file system watching
-- **Extensible**: Easy to add support for additional AI coding extensions
+---
 
-### Action Type Support
-| Action Type | Default Policy | Description |
-|-------------|----------------|-------------|
-| Read Files | Allow | Reading files from workspace |
-| Edit Files | Allow | Editing existing files |
-| Create Files | Ask | Creating new files |
-| Delete Files | Deny | Deleting files |
-| Rename Files | Ask | Renaming files |
-| Terminal Commands | Deny | Executing terminal commands |
-| Browser Tools | Deny | Browser automation |
-| MCP Tools | Deny | Model Context Protocol access |
-| External Directory | Deny | Accessing directories outside workspace |
-| Sensitive Files | Deny | Accessing secrets, keys, credentials |
+## 🚀 Quick Start
 
-### Configuration Options
-- Enable/disable the extension
-- Trusted workspace only mode
-- Per-action-type approval rules
-- Sensitive file pattern customization
-- Auto-approve delay
-- Notification settings
-- Ask mode timeout
+### Installation
 
-## Installation
+**Option 1: VS Code Marketplace** *(Recommended)*
+> Open in VS Code: `ext install universal-auto-accept`
 
-### From VSIX
-1. Download the `.vsix` file from releases
-2. Run: `code --install-extension universal-auto-accept.vsix`
-
-### From Source
+**Option 2: VSIX**
 ```bash
+# Download from releases
+code --install-extension universal-auto-accept.vsix
+```
+
+**Option 3: Build from Source**
+```bash
+git clone https://github.com/omni-enterprise/universal-auto-accept.git
+cd universal-auto-accept
 npm install
-npm run compile
-npm run package
+npm run compile && npm run package
 code --install-extension ./universal-auto-accept-*.vsix
 ```
 
-## Configuration
+### First Steps
 
-### Settings (package.json contributed)
+1. **Install** the extension
+2. **Trust your workspace** (required for auto-approve)
+3. **Done!** — Safe actions auto-approve, sensitive ones prompt
+
+> 💡 **Tip:** Click the status bar to toggle modes: 🟢 ON / 🟡 ASK / 🔴 OFF
+
+---
+
+## ✨ Features
+
+<!-- FEATURE GRID -->
+<table>
+<tr>
+
+<td>
+
+### 🛡️ Risk-Based Protection
+
+Automatically categorize actions as **Low** ⚡, **Medium** ⚠️, or **High** 🚨 risk with appropriate handling.
+
+</td>
+
+<td>
+
+### ⚡️ Lightning-Fast Auto-Approve
+
+Safe file edits get approved instantly — no interruption to your flow.
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+### 🔌 Universal Adapter System
+
+Works with Roo Code, Kilo Code, and extensible to future AI assistants.
+
+</td>
+
+<td>
+
+### 🔄 Batch Processing
+
+Group related actions for efficient approval. Undo entire batches with one click.
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+### 🔒 Sensitive File Guard
+
+Automatically blocks access to `.env`, `.ssh`, `secrets`, tokens, keys, and more.
+
+</td>
+
+<td>
+
+### 👀 Diff Preview
+
+Visual diff of pending changes before you approve — see exactly what will change.
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+### 📊 Status Bar Dashboard
+
+Real-time mode indicator at a glance. Click to toggle or access commands.
+
+</td>
+
+<td>
+
+### ⚙️ Fully Configurable
+
+Granular control over every action type. Customize patterns, timeouts, and behavior.
+
+</td>
+
+</tr>
+</table>
+
+---
+
+## 🎬 How It Works
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│   🤖 AI Assistant (Roo Code / Kilo Code)                        │
+│           │                                                     │
+│           ▼                                                     │
+│   ┌───────────────────┐                                        │
+│   │  Action Detection │  ← File watcher monitors changes       │
+│   └─────────┬─────────┘                                        │
+│             │                                                   │
+│             ▼                                                   │
+│   ┌───────────────────┐                                        │
+│   │  Risk Analyzer    │  ← Checks patterns, action type        │
+│   │  🔍 Risk Score    │     and sensitive file rules            │
+│   └─────────┬─────────┘                                        │
+│             │                                                   │
+│             ▼                                                   │
+│   ┌───────────────────┐     ┌──────────────────────┐          │
+│   │  Approval Engine  │────►│  Policy Decision     │          │
+│   │                    │     │  ✅ Allow / ⚠️ Ask / 🚫 Deny│          │
+│   └─────────┬─────────┘     └──────────────────────┘          │
+│             │                                                   │
+│             ▼                                                   │
+│   ┌───────────────────┐                                        │
+│   │  Action Executor  │  ← Apply changes or show preview       │
+│   └───────────────────┘                                        │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Status Bar Indicators
+
+| State | Color | Meaning |
+|-------|-------|---------|
+| 🟢 **ON** | Green | Auto-approve enabled — safe actions go through |
+| 🟡 **ASK** | Yellow | Confirmation required — review before proceeding |
+| 🔴 **OFF** | Red | Extension disabled — all actions denied |
+
+---
+
+## 📋 Action Types & Default Policies
+
+| Action | Policy | Description |
+|--------|--------|-------------|
+| 📖 Read Files | ✅ Allow | Reading workspace files |
+| ✏️ Edit Files | ✅ Allow | Modifying existing files |
+| 📝 Create Files | ⚠️ Ask | Creating new files |
+| 🗑️ Delete Files | 🚫 Deny | Deleting files |
+| 📁 Rename Files | ⚠️ Ask | Moving/renaming files |
+| 💻 Terminal Commands | 🚫 Deny | Shell execution |
+| 🌐 Browser Tools | 🚫 Deny | Browser automation |
+| 🔧 MCP Tools | 🚫 Deny | Model Context Protocol |
+| 📂 External Directory | 🚫 Deny | Outside workspace |
+| 🔐 Sensitive Files | 🚫 Deny | Secrets, keys, tokens |
+
+---
+
+## ⚙️ Configuration
+
+### Quick Settings
 
 ```json
 {
   "universalAutoAccept.enabled": true,
   "universalAutoAccept.trustedWorkspaceOnly": true,
+  "universalAutoAccept.defaultPolicy": "ask"
+}
+```
+
+### Full Settings Reference
+
+```json
+{
+  // ============ CORE ============
+  "universalAutoAccept.enabled": true,
+  "universalAutoAccept.trustedWorkspaceOnly": true,
   "universalAutoAccept.defaultPolicy": "ask",
+
+  // ============ ADAPTERS ============
   "universalAutoAccept.adapterSettings": {
     "rooCode": true,
     "kiloCode": true
   },
+
+  // ============ ACTION RULES ============
   "universalAutoAccept.actionRules": {
     "readFiles": "allow",
     "editFiles": "allow",
@@ -78,6 +231,8 @@ code --install-extension ./universal-auto-accept-*.vsix
     "externalDirectoryAccess": "deny",
     "sensitiveFileAccess": "deny"
   },
+
+  // ============ SECURITY ============
   "universalAutoAccept.sensitiveFilePatterns": [
     "**/.env*",
     "**/.ssh/**",
@@ -87,142 +242,185 @@ code --install-extension ./universal-auto-accept-*.vsix
     "**/credentials*",
     "**/*.pem"
   ],
-  "universalAutoAccept.maxUndoBatchSize": 10,
+
+  // ============ BEHAVIOR ============
   "universalAutoAccept.autoApproveDelay": 0,
-  "universalAutoAccept.logLevel": "info",
-  "universalAutoAccept.statusBarMode": "on",
+  "universalAutoAccept.askModeTimeout": 300,
+  "universalAutoAccept.maxUndoBatchSize": 10,
+
+  // ============ UI ============
   "universalAutoAccept.showNotifications": true,
-  "universalAutoAccept.askModeTimeout": 300
+  "universalAutoAccept.statusBarMode": "on",
+  "universalAutoAccept.logLevel": "info"
 }
 ```
 
-See `sample-settings.json` for a complete example.
+> 📖 See [`sample-settings.json`](./sample-settings.json) for complete examples.
 
-## Commands
+---
 
-| Command | Description |
-|---------|-------------|
-| `universalAutoAccept.toggleEnabled` | Toggle the extension on/off |
-| `universalAutoAccept.openSettings` | Open extension settings |
-| `universalAutoAccept.approveCurrentBatch` | Approve all pending actions |
-| `universalAutoAccept.rejectCurrentBatch` | Reject all pending actions |
-| `universalAutoAccept.showActiveAdapter` | Show current adapter info |
-| `universalAutoAccept.rescanAdapters` | Re-scan for compatible extensions |
-| `universalAutoAccept.undoLastBatch` | Undo last approved batch |
-| `universalAutoAccept.showDiffPreview` | Show diff preview of pending changes |
+## ⌨️ Commands
 
-## Status Bar
+Open the **Command Palette** (`Ctrl+Shift+P` / `Cmd+Shift+P`):
 
-The extension adds a status bar item showing the current mode:
-- 🟢 **ON** (green): Auto-approve enabled
-- 🟡 **ASK** (yellow): Confirmation required
-- 🔴 **OFF** (red): Extension disabled
+| Command | Shortcut | Description |
+|---------|----------|-------------|
+| `Toggle Enabled` | — | Enable/disable extension |
+| `Open Settings` | — | Open extension settings |
+| `Approve Current Batch` | — | Approve all pending actions |
+| `Reject Current Batch` | — | Reject all pending actions |
+| `Show Diff Preview` | `Ctrl+Shift+D` | View pending changes |
+| `Undo Last Batch` | — | Revert last approved batch |
+| `Show Active Adapter` | — | Display adapter info |
+| `Rescan Adapters` | — | Re-detect AI extensions |
 
-Click on the status bar item to toggle the mode.
+---
 
-## Architecture
+## 🔌 Works With
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    extension.ts                      │
-│            (Main entry point, activation)            │
-└───────────────────────────┬─────────────────────────┘
-                            │
-        ┌───────────────────┼───────────────────┐
-        ▼                   ▼                   ▼
-┌───────────────┐   ┌───────────────┐   ┌───────────────┐
-│ adapterRegistry│   │   commands.ts │   │    logger.ts │
-│ (Plugin System)│   │  (Handlers)   │   │(Output Channel)│
-└───────┬───────┘   └───────────────┘   └───────────────┘
-        │
-        ▼
-┌─────────────────────────────────────────────────────┐
-│                    approvalEngine.ts                 │
-│            (Core approval state machine)              │
-└───────────────────────────┬─────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────┐
-│                    riskAnalyzer.ts                    │
-│              (Action risk assessment)                │
-└───────────────────────────┬─────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────┐
-│                     settings.ts                       │
-│               (Configuration access)                  │
-└─────────────────────────────────────────────────────┘
+<div align="center">
+
+### Supported AI Assistants
+
+| [🦘 Roo Code](https://marketplace.visualstudio.com/items?itemName=Rooveterinary.roo-code) | [⚡️ Kilo Code](https://marketplace.visualstudio.com/items?itemName=KiloCode.kilo-code) |
+|:---:|:---:|
+| Native adapter | Native adapter |
+
+### Easy to Extend
+
+The adapter system makes it simple to add support for new AI coding assistants.
+
+```typescript
+// Create your adapter
+class MyAdapter implements IAdapter {
+  name = 'my-ai-assistant';
+  activate(): void { /* ... */ }
+  deactivate(): void { /* ... */ }
+}
+
+// Register it
+adapterRegistry.register(new MyAdapter());
 ```
 
-## API Limitations
+</div>
 
-This extension operates within VS Code's public API limitations. See [LIMITATIONS.md](LIMITATIONS.md) for details.
+---
 
-### Key Limitations
+## ❓ FAQ & Troubleshooting
 
-1. **No Official Hook System**: VS Code has no public API to intercept or cancel AI extension actions before they execute.
+### Q: Why aren't actions auto-approving?
+**A:** Check if:
+- Your workspace is trusted (`Ctrl+Shift+P` → "Trust Workspace")
+- The extension is enabled (status bar shows 🟢)
+- The action type is set to `allow` in settings
 
-2. **No Cancel/Undo API**: Cannot programmatically undo changes made by other extensions. The undo feature works by tracking file operations and attempting to revert them.
+### Q: How do I protect specific files?
+**A:** Add glob patterns to `universalAutoAccept.sensitiveFilePatterns`:
+```json
+"universalAutoAccept.sensitiveFilePatterns": [
+  "**/.env*",
+  "**/my-secret-file.json"
+]
+```
 
-3. **File Watching Latency**: File system events may fire after changes are applied, depending on OS-level timing.
+### Q: Can I undo changes?
+**A:** Yes! Run `Universal Auto Accept: Undo Last Batch` from the Command Palette. Note: Undo is best-effort and may not work for all file types.
 
-4. **Extension Discovery**: No API to list installed extensions' capabilities. Known extension IDs are hardcoded.
+### Q: Does this work with [Other AI Extension]?
+**A:** Currently supports Roo Code and Kilo Code natively. Other extensions use the generic file-watching adapter. Open an issue to request native support!
 
-5. **Terminal Integration**: Cannot intercept terminal command execution.
+### Q: How do I see what's happening?
+**A:** Set log level to `debug` in settings, then open **Output** → **Universal Auto Accept** to see detailed logs.
 
-### Workarounds Implemented
+---
 
-- File system watching for change detection
-- Configuration observation for state changes
-- Status bar integration for visual feedback
-- Webview-based diff preview for manual review
-- Undo stack for tracking and reverting changes
+## 📐 Architecture
 
-## Development
+```
+extension.ts
+│
+├── commands.ts          ← Command handlers
+├── adapterRegistry.ts   ← Plugin system
+│   ├── rooAdapter.ts    ← 🦘 Roo Code integration
+│   ├── kiloAdapter.ts   ← ⚡ Kilo Code integration
+│   └── genericAdapter.ts← Fallback watcher
+│
+├── approvalEngine.ts    ← Core state machine
+├── riskAnalyzer.ts      ← Action risk assessment
+├── settings.ts          ← Configuration access
+├── diffPreview.ts       ← Webview diff viewer
+└── logger.ts            ← Logging system
+```
+
+---
+
+## 🚨 Important Limitations
+
+This extension operates within **VS Code's public API**, which has inherent limitations:
+
+| What We **Can** Do | What We **Cannot** Do |
+|---|---|
+| ✅ Detect file changes via watchers | ❌ Intercept actions before execution |
+| ✅ Offer undo for changes | ❌ Guarantee reliable undo |
+| ✅ Show diff previews | ❌ Prevent terminal commands |
+| ✅ Pattern-match sensitive files | ❌ Communicate with AI extensions |
+
+> 📖 See [`LIMITATIONS.md`](LIMITATIONS.md) for full details.
+
+---
+
+## ❤️ Contributing
+
+Contributions are welcome! Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines.
+
+### Development Setup
+
+```bash
+# Install dependencies
+npm install
+
+# Build (compile TypeScript)
+npm run compile
+
+# Watch mode (auto-recompile)
+npm run watch
+
+# Lint
+npm run lint
+
+# Package for distribution
+npm run package
+```
 
 ### Prerequisites
+
 - Node.js 18+
 - VS Code 1.85+
 - npm 9+
 
-### Setup
-```bash
-npm install
-```
+---
 
-### Build
-```bash
-npm run compile
-```
+## 📜 License
 
-### Watch (development)
-```bash
-npm run watch
-```
+MIT License — see [`LICENSE`](LICENSE) for details.
 
-### Package
-```bash
-npm run package
-```
+---
 
-### Lint
-```bash
-npm run lint
-```
+## 🙏 Acknowledgments
 
-## Contributing
+Built with the [VS Code Extension API](https://code.visualstudio.com/api).
 
-Contributions are welcome! Please ensure:
-1. TypeScript strict mode compliance
-2. Test coverage for new features
-3. Documentation updates
+Special thanks to the teams behind:
+- [🦘 Roo Code](https://github.com/RooVeterinaryInc/roo-code)
+- [⚡️ Kilo Code](https://github.com/KiloCode/kilo-code)
+- [VS Code](https://github.com/microsoft/vscode)
 
-## License
+---
 
-MIT
+<div align="center">
 
-## Acknowledgments
+**Made with ❤️ by [Omni Enterprise](https://omni-enterprise.dev)**
 
-- VS Code Extension API
-- Roo Code extension
-- Kilo Code extension
+⭐ Star this project if it helps you!
+
+</div>
